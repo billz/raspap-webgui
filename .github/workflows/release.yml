@@ -47,6 +47,14 @@ jobs:
           } &&
           chmod +x stage-raspap/prerun.sh
 
+      - name: Increase swap
+        run: |
+          sudo fallocate -l 4G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
       - name: Build RaspAP Image
         id: build
         uses: usimd/pi-gen-action@v1
