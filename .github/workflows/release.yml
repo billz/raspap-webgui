@@ -34,6 +34,19 @@ jobs:
           
           # Set Wi-Fi country to prevent RF kill
           raspi-config nonint do_wifi_country "US"
+
+          # Fetch RaspAP version and set MOTD
+          RASPAP_VERSION=\$(curl -sL https://install.raspap.com | bash -s -- --version)
+          echo "\$RASPAP_VERSION" | tee /etc/motd
+          EOF
+          } &&
+          chmod +x stage-raspap/package-raspap/00-run-chroot.sh &&
+          {
+          cat > stage-raspap/prerun.sh <<-EOF
+          #!/bin/bash -e
+          if [ ! -d "\${ROOTFS_DIR}" ]; then
+            copy_previous
+          fi
           EOF
           } &&
           chmod +x stage-raspap/package-raspap/00-run-chroot.sh &&
@@ -46,14 +59,6 @@ jobs:
           EOF
           } &&
           chmod +x stage-raspap/prerun.sh
-
-      - name: Increase swap
-        run: |
-          sudo fallocate -l 4G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
-          free -h
 
       - name: Build RaspAP Image
         id: build
