@@ -32,7 +32,6 @@ jobs:
           apt-get update -y && apt-get install -y curl dhcpcd5 iptables iptables-persistent netfilter-persistent procps
           update-alternatives --set iptables /usr/sbin/iptables-legacy
           update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
-          update-alternatives --set iptables-restore /usr/sbin/iptables-restore-legacy
           update-alternatives --set iptables-save /usr/sbin/iptables-save-legacy
           update-alternatives --display iptables
 
