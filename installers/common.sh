@@ -26,7 +26,6 @@ readonly raspap_adblock="/etc/dnsmasq.d/090_adblock.conf"
 readonly raspap_sysctl="/etc/sysctl.d/90_raspap.conf"
 readonly raspap_network="$raspap_dir/networking/"
 readonly raspap_router="/etc/lighttpd/conf-available/50-raspap-router.conf"
-readonly rulesv4="/etc/iptables/rules.v4"
 readonly blocklist_hosts="https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
 readonly blocklist_domains="https://big.oisd.nl/dnsmasq"
 
@@ -266,10 +265,7 @@ function _install_dependencies() {
         echo "${network_tools} will be installed from the main deb sources list"
     fi
 
-    # Set dconf-set-selections
-    echo iptables-persistent iptables-persistent/autosave_v4 boolean true | sudo debconf-set-selections
-    echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections
-    sudo apt-get install -y lighttpd git hostapd dnsmasq iptables-persistent $php_package $dhcpcd_package $iw_package $rsync_package $network_tools $ifconfig_package vnstat qrencode jq isoquery || _install_status 1 "Unable to install dependencies"
+     sudo apt-get install -y lighttpd git hostapd dnsmasq $php_package $dhcpcd_package $iw_package $rsync_package $network_tools $ifconfig_package vnstat qrencode jq isoquery || _install_status 1 "Unable to install dependencies"
     _install_status 0
 }
 
@@ -774,79 +770,29 @@ function _enable_raspap_daemon() {
     sudo systemctl enable raspapd.service || _install_status 1 "Failed to enable raspap.service"
 }
 
-# Configure IP forwarding, set nftables rules if iptables (legacy) is unavailable
+# Configure IP forwarding, setting nftables rules
 function _configure_networking() {
     _install_log "Configuring networking"
+
     echo "Enabling IP forwarding"
-    echo "net.ipv4.ip_forward=1" | sudo tee $raspap_sysctl > /dev/null || _install_status 1 "Unable to set IP forwarding"
-    sudo sysctl -p $raspap_sysctl || _install_status 1 "Unable to execute sysctl"
-    sudo /etc/init.d/procps restart || _install_status 1 "Unable to execute procps"
+    echo "net.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/99-raspap.conf > /dev/null || _install_status 1 "Unable to set IP forwarding"
+    sudo sysctl --system || _install_status 1 "Unable to reload sysctl settings"
 
-    echo "Checking firewall backend"
-    if command -v iptables-legacy > /dev/null 2>&1; then
-        echo "Using iptables (legacy)"
-        firewall_backend="iptables"
-    else
-        echo "Using nftables"
-        firewall_backend="nftables"
-    fi
+    echo "Configuring nftables rules"
 
-    if [[ "$firewall_backend" == "iptables" ]]; then
-        echo "Configuring iptables rules"
-        rules=(
-        "-A POSTROUTING -j MASQUERADE"
-        "-A POSTROUTING -s 192.168.50.0/24 ! -d 192.168.50.0/24 -j MASQUERADE"
-        )
-        for rule in "${rules[@]}"; do
-            if grep -- "$rule" $rulesv4 > /dev/null; then
-                echo "Rule already exists: ${rule}"
-            else
-                rule=$(sed -e 's/^\(-A POSTROUTING\)/-t nat \1/' <<< $rule)
-                echo "Adding rule: ${rule}"
-                sudo iptables $rule || _install_status 1 "Unable to execute iptables"
-                added=true
-            fi
-        done
-        # Persist rules if added
-        if [ "$added" = true ]; then
-            echo "Persisting iptables rules"
-            sudo iptables-save | sudo tee $rulesv4 > /dev/null || _install_status 1 "Unable to execute iptables-save"
-        fi
-    else
-        echo "Configuring nftables rules"
-        nft_config="/etc/nftables.conf"
+    # Define NAT table and masquerade rules
+    sudo nft add table ip nat
+    sudo nft add chain ip nat POSTROUTING { type nat hook postrouting priority 100 \; }
+    sudo nft add rule ip nat POSTROUTING oifname "wlan0" masquerade
+    sudo nft add rule ip nat POSTROUTING ip saddr 192.168.50.0/24 oifname "eth0" masquerade
 
-        sudo nft list ruleset > /dev/null 2>&1
-        if [ $? -ne 0 ]; then
-            _install_status 1 "nftables is not running or unsupported"
-        fi
-
-        sudo nft add table ip nat || _install_status 1 "Unable to add nftables table"
-
-        rules=(
-        "add chain ip nat postrouting { type nat hook postrouting priority 100 \; }"
-        "add rule ip nat postrouting masquerade"
-        "add rule ip nat postrouting ip saddr 192.168.50.0/24 ip daddr != 192.168.50.0/24 masquerade"
-        )
-
-        for rule in "${rules[@]}"; do
-            if sudo nft list ruleset | grep -q "$rule"; then
-                echo "Rule already exists: ${rule}"
-            else
-                echo "Adding rule: ${rule}"
-                sudo nft "$rule" || _install_status 1 "Unable to execute nftables rule"
-                added=true
-            fi
-        done
-
-        # Persist rules if added
-        if [ "$added" = true ]; then
-            echo "Persisting nftables rules"
-            sudo nft list ruleset | sudo tee $nft_config > /dev/null || _install_status 1 "Unable to save nftables rules"
-            sudo systemctl enable nftables
-            sudo systemctl restart nftables
-        fi
-    fi
+    # Save rules to persist across reboots
+    echo "Saving nftables rules"
+    sudo nft list ruleset | sudo tee /etc/nftables.conf > /dev/null || _install_status 1 "Unable to save nftables rules"
+    
+    # Enable nftables service for persistence
+    sudo systemctl enable nftables.service
+    sudo systemctl restart nftables.service || _install_status 1 "Unable to restart nftables service"
 
     # Prompt to install RaspAP daemon
     echo -n "Enable RaspAP control service (Recommended)? [Y/n]: "
@@ -863,6 +809,7 @@ function _configure_networking() {
     fi
     _install_status 0
 }
+
 
 # Prompt to configure TCP BBR option
 function _prompt_configure_tcp_bbr() {
