@@ -29,15 +29,7 @@ jobs:
           {
           cat > stage-raspap/package-raspap/00-run-chroot.sh <<-EOF
           #!/bin/bash
-          apt-get update -y && apt-get install -y curl dhcpcd5 iptables iptables-persistent netfilter-persistent procps
-          ln -sf /usr/sbin/iptables-legacy-save /usr/sbin/iptables-save
-          update-alternatives --set iptables /usr/sbin/iptables-legacy
-          update-alternatives --set iptables-save /usr/sbin/iptables-legacy-save
-          update-alternatives --display iptables
-
-          mkdir -p /etc/iptables
-          touch /etc/iptables/rules.v4 /etc/iptables/rules.v6
-          chmod 644 /etc/iptables/rules.v4 /etc/iptables/rules.v6
+          apt-get update -y && apt-get install -y curl dhcpcd5 procps
 
           curl -sL https://raw.githubusercontent.com/billz/raspap-webgui/refs/heads/master/installers/raspbian.sh | bash -s -- --yes --openvpn 1 --restapi 1 --adblock 1 --wireguard 1 --tcp-bbr 1 --check 0
           
