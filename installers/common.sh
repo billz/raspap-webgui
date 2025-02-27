@@ -774,7 +774,7 @@ function _enable_raspap_daemon() {
     sudo systemctl enable raspapd.service || _install_status 1 "Failed to enable raspap.service"
 }
 
-# Configure IP forwarding, set IP tables rules, prompt to install RaspAP daemon
+# Configure IP forwarding, set nftables rules if iptables (legacy) is unavailable
 function _configure_networking() {
     _install_log "Configuring networking"
     echo "Enabling IP forwarding"
@@ -782,25 +782,70 @@ function _configure_networking() {
     sudo sysctl -p $raspap_sysctl || _install_status 1 "Unable to execute sysctl"
     sudo /etc/init.d/procps restart || _install_status 1 "Unable to execute procps"
 
-    echo "Checking iptables rules"
-    rules=(
-    "-A POSTROUTING -j MASQUERADE"
-    "-A POSTROUTING -s 192.168.50.0/24 ! -d 192.168.50.0/24 -j MASQUERADE"
-    )
-    for rule in "${rules[@]}"; do
-        if grep -- "$rule" $rulesv4 > /dev/null; then
-            echo "Rule already exits: ${rule}"
-        else
-            rule=$(sed -e 's/^\(-A POSTROUTING\)/-t nat \1/' <<< $rule)
-            echo "Adding rule: ${rule}"
-            sudo iptables $rule || _install_status 1 "Unable to execute iptables"
-            added=true
+    echo "Checking firewall backend"
+    if command -v iptables-legacy > /dev/null 2>&1; then
+        echo "Using iptables (legacy)"
+        firewall_backend="iptables"
+    else
+        echo "Using nftables"
+        firewall_backend="nftables"
+    fi
+
+    if [[ "$firewall_backend" == "iptables" ]]; then
+        echo "Configuring iptables rules"
+        rules=(
+        "-A POSTROUTING -j MASQUERADE"
+        "-A POSTROUTING -s 192.168.50.0/24 ! -d 192.168.50.0/24 -j MASQUERADE"
+        )
+        for rule in "${rules[@]}"; do
+            if grep -- "$rule" $rulesv4 > /dev/null; then
+                echo "Rule already exists: ${rule}"
+            else
+                rule=$(sed -e 's/^\(-A POSTROUTING\)/-t nat \1/' <<< $rule)
+                echo "Adding rule: ${rule}"
+                sudo iptables $rule || _install_status 1 "Unable to execute iptables"
+                added=true
+            fi
+        done
+        # Persist rules if added
+        if [ "$added" = true ]; then
+            echo "Persisting iptables rules"
+            sudo iptables-save | sudo tee $rulesv4 > /dev/null || _install_status 1 "Unable to execute iptables-save"
         fi
-    done
-    # Persist rules if added
-    if [ "$added" = true ]; then
-        echo "Persisting IP tables rules"
-        sudo iptables-save | sudo tee $rulesv4 > /dev/null || _install_status 1 "Unable to execute iptables-save"
+    else
+        echo "Configuring nftables rules"
+        nft_config="/etc/nftables.conf"
+
+        sudo nft list ruleset > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            _install_status 1 "nftables is not running or unsupported"
+        fi
+
+        sudo nft add table ip nat || _install_status 1 "Unable to add nftables table"
+
+        rules=(
+        "add chain ip nat postrouting { type nat hook postrouting priority 100 \; }"
+        "add rule ip nat postrouting masquerade"
+        "add rule ip nat postrouting ip saddr 192.168.50.0/24 ip daddr != 192.168.50.0/24 masquerade"
+        )
+
+        for rule in "${rules[@]}"; do
+            if sudo nft list ruleset | grep -q "$rule"; then
+                echo "Rule already exists: ${rule}"
+            else
+                echo "Adding rule: ${rule}"
+                sudo nft "$rule" || _install_status 1 "Unable to execute nftables rule"
+                added=true
+            fi
+        done
+
+        # Persist rules if added
+        if [ "$added" = true ]; then
+            echo "Persisting nftables rules"
+            sudo nft list ruleset | sudo tee $nft_config > /dev/null || _install_status 1 "Unable to save nftables rules"
+            sudo systemctl enable nftables
+            sudo systemctl restart nftables
+        fi
     fi
 
     # Prompt to install RaspAP daemon
@@ -817,7 +862,7 @@ function _configure_networking() {
         _enable_raspap_daemon
     fi
     _install_status 0
- }
+}
 
 # Prompt to configure TCP BBR option
 function _prompt_configure_tcp_bbr() {
