@@ -1,7 +1,12 @@
 name: Torrent Generation
 
 on:
-  workflow_dispatch
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Specify tag to run on'
+        required: true
+        default: 'master'
   
 jobs:
   torrent:
@@ -9,8 +14,10 @@ jobs:
     permissions:
       contents: write 
     steps:
-      - name: Checkout
+      - name: Checkout with ref
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
 
       - name: Create torrents
         uses: devopsx/action-torrent@v1
