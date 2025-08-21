@@ -44,3 +44,27 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.event.inputs.tag || github.ref }}
           overwrite: true
+          
+  torrent:
+    needs: build-raspap-image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create torrents
+        uses: devopsx/action-torrent@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            raspap-bookworm-arm64-lite-*.img.zip
+            raspap-bookworm-armhf-lite-*.img.zip
+
+      - name: Upload torrents to release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: torrents/*.torrent
+    
