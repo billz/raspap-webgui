@@ -58,9 +58,6 @@ msgstr "TOR proxy"
 msgid "Authentication"
 msgstr "Authentication"
 
-msgid "Change Theme"
-msgstr "Change Theme"
-
 msgid "System"
 msgstr "System"
 
@@ -581,11 +578,14 @@ msgstr "Clients with a particular hardware MAC address can always be allocated t
 msgid "This option adds <code>dhcp-host</code> entries to the dnsmasq configuration."
 msgstr "This option adds <code>dhcp-host</code> entries to the dnsmasq configuration."
 
-msgid "This toggles the <code>gateway</code>/<code>nogateway</code> option for this interface in the DHCPCD configuration."
-msgstr "This toggles the <code>gateway</code>/<code>nogateway</code> option for this interface in the DHCPCD configuration."
+msgid "This toggles the <code>gateway</code>/<code>nogateway</code> option for this interface in the dhcpcd.conf file."
+msgstr "This toggles the <code>gateway</code>/<code>nogateway</code> option for this interface in the dhcpcd.conf file."
 
 msgid "This toggles the <code>nohook wpa_supplicant</code> option for this interface in the DHCPCD configuration."
 msgstr "This toggles the <code>nohook wpa_supplicant</code> option for this interface in the DHCPCD configuration."
+
+msgid "Enable this only if you want your device to use this interface as its primary route to the internet."
+msgstr "Enable this only if you want your device to use this interface as its primary route to the internet."
 
 msgid "Disable wpa_supplicant dhcp hook for this interface"
 msgstr "Disable wpa_supplicant dhcp hook for this interface"
@@ -1064,6 +1064,9 @@ msgstr "System Time"
 msgid "Memory Used"
 msgstr "Memory Used"
 
+msgid "Storage Used"
+msgstr "Storage Used"
+
 msgid "CPU Load"
 msgstr "CPU Load"
 
@@ -1249,6 +1252,15 @@ msgstr "Details"
 
 msgid "Installed"
 msgstr "Installed"
+
+msgid "Alert messages"
+msgstr "Alert messages"
+
+msgid "Automatically close alerts after a specified timeout"
+msgstr "Automatically close alerts after a specified timeout"
+
+msgid "Alert close timeout (milliseconds)"
+msgstr "Alert close timeout (milliseconds)"
 
 #: includes/data_usage.php
 msgid "Data usage"
