@@ -15,8 +15,10 @@ jobs:
         include:
           - arch: "32-bit"
             pi_gen_version: "master"
+            base_image: "arm32v7/debian:trixie"
           - arch: "64-bit"
             pi_gen_version: "arm64"
+            base_image: "arm64v8/debian:trixie"
       fail-fast: false
     steps:
       - name: Checkout repository
@@ -34,7 +36,8 @@ jobs:
           stage-list: stage0 stage1 stage2 ./stage-raspap
           verbose-output: true
           pi-gen-version: ${{ matrix.pi_gen_version }}
-          pi-gen-repository: RaspAP/pi-gen    
+          pi-gen-repository: RaspAP/pi-gen
+          base-image: ${{ matrix.base_image }}
 
       - name: Upload Artifact
         uses: svenstaro/upload-release-action@v2
