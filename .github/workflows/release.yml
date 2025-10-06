@@ -15,8 +15,10 @@ jobs:
         include:
           - arch: "32-bit"
             pi_gen_version: "master"
+            docker-platform: "linux/arm/v7"
           - arch: "64-bit"
             pi_gen_version: "arm64"
+            docker-platform: "linux/arm64"
       fail-fast: false
     steps:
       - name: Checkout repository
@@ -35,6 +37,21 @@ jobs:
           verbose-output: true
           pi-gen-version: ${{ matrix.pi_gen_version }}
           pi-gen-repository: RaspAP/pi-gen
+          docker-platform: ${{ matrix.docker-platform }}
+          pi-gen-release: Raspberry Pi reference
+          release: trixie
+          compression: zip
+          compression-level: 6
+          locale: en_GB.UTF-8
+          hostname: raspberrypi
+          keyboard-keymap: gb
+          keyboard-layout: English (UK)
+          timezone: Europe/London
+          username: pi
+          disable-first-boot-user-rename: 0
+          pubkey-only-ssh: 0
+          export-last-stage-only: true
+          enable-noobs: false
 
       - name: Upload Artifact
         uses: svenstaro/upload-release-action@v2
