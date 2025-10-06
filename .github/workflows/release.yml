@@ -27,7 +27,7 @@ jobs:
 
       - name: Build RaspAP Image
         id: build
-        uses: usimd/pi-gen-action@v1
+        uses: usimd/pi-gen-action@v1.10.0
         with:
           image-name: "raspap-trixie-${{ matrix.arch == '32-bit' && 'armhf' || 'arm64' }}-lite-${{ github.event.inputs.tag || github.ref_name }}"
           enable-ssh: 1
@@ -35,6 +35,7 @@ jobs:
           verbose-output: true
           pi-gen-version: ${{ matrix.pi_gen_version }}
           pi-gen-repository: RaspAP/pi-gen
+          pi-gen-release: trixie
           release: trixie
 
       - name: Upload Artifact
