@@ -35,8 +35,9 @@ jobs:
           verbose-output: true
           pi-gen-version: ${{ matrix.pi_gen_version }}
           pi-gen-repository: RaspAP/pi-gen
+          release: testing
           pi-gen-release: trixie
-          release: trixie
+          
 
       - name: Upload Artifact
         uses: svenstaro/upload-release-action@v2
