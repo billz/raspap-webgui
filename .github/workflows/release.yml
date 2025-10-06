@@ -22,14 +22,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-        with:
-          platforms: arm,arm64
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-        
       - name: Add RaspAP Stage
         run: sh ./.github/scripts/add-raspap-stage.sh
 
@@ -43,23 +35,6 @@ jobs:
           verbose-output: true
           pi-gen-version: ${{ matrix.pi_gen_version }}
           pi-gen-repository: RaspAP/pi-gen
-          pi-gen-release: "Raspberry Pi reference"
-          release: "trixie"
-          compression: zip
-          compression-level: 6
-          locale: en_GB.UTF-8
-          hostname: raspberrypi
-          keyboard-keymap: gb
-          keyboard-layout: "English (UK)"
-          timezone: Europe/London
-          username: pi
-          disable-first-boot-user-rename: 0
-          pubkey-only-ssh: 0
-          export-last-stage-only: true
-          enable-noobs: false
-          increase-runner-disk-size: false
-          pi-gen-dir: pi-gen
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Artifact
         uses: svenstaro/upload-release-action@v2
