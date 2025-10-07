@@ -24,6 +24,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Disable Buildx
+        run: docker buildx rm default || true
+          
       - name: Add RaspAP Stage
         run: sh ./.github/scripts/add-raspap-stage.sh
 
