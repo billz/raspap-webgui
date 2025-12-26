@@ -2,12 +2,15 @@ name: Update OS List for RPi Imager
 
 on:
   workflow_dispatch:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["release.yaml"]
+    types:
+      - completed
 
 jobs:
   update-os-list:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: write
 
@@ -20,14 +23,10 @@ jobs:
       - name: Get release information
         id: release
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            VERSION="${{ github.event.release.tag_name }}"
-            RELEASE_DATE=$(echo "${{ github.event.release.published_at }}" | cut -d'T' -f1)
-          else
-            RESPONSE=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest")
-            VERSION=$(echo "$RESPONSE" | jq -r '.tag_name')
-            RELEASE_DATE=$(echo "$RESPONSE" | jq -r '.published_at' | cut -d'T' -f1)
-          fi
+          # Fetch latest release info
+          RESPONSE=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest")
+          VERSION=$(echo "$RESPONSE" | jq -r '.tag_name')
+          RELEASE_DATE=$(echo "$RESPONSE" | jq -r '.published_at' | cut -d'T' -f1)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "release_date=$RELEASE_DATE" >> $GITHUB_OUTPUT
           echo "Found release: $VERSION (published: $RELEASE_DATE)"
@@ -57,3 +56,4 @@ jobs:
             git commit -m "Update OS list for RPi Imager (${{ steps.release.outputs.version }})"
             git push
           fi
+
